@@ -40,30 +40,66 @@
     loop
     playsinline
     webkit-playsinline
-    preload="auto"
-  >
-    <source src="video.mp4" type="video/mp4">
+    preload="auto">
   </video>
 
   <script>
     const video = document.getElementById("pentaTV");
 
+    let versionActual = null;
+
     video.muted = true;
     video.defaultMuted = true;
 
-    function iniciarPentaTV() {
-      video.play().catch(() => {
-        console.log("Safari bloqueó temporalmente el autoplay.");
+    async function revisarVersion() {
+      try {
+        const respuesta = await fetch(
+          "version.txt?t=" + Date.now(),
+          { cache: "no-store" }
+        );
+
+        const nuevaVersion = (await respuesta.text()).trim();
+
+        if (versionActual === null) {
+          versionActual = nuevaVersion;
+          cargarVideo(nuevaVersion);
+          return;
+        }
+
+        if (nuevaVersion !== versionActual) {
+          versionActual = nuevaVersion;
+          cargarVideo(nuevaVersion);
+        }
+
+      } catch (error) {
+        console.log("No se pudo comprobar la versión.");
+      }
+    }
+
+    function cargarVideo(version) {
+      const tiempoAnterior = video.currentTime || 0;
+
+      video.src = "video.mp4?v=" + encodeURIComponent(version);
+      video.load();
+
+      video.addEventListener("loadedmetadata", function restaurarTiempo() {
+        if (tiempoAnterior < video.duration) {
+          video.currentTime = tiempoAnterior;
+        }
+
+        video.play().catch(() => {
+          console.log("El navegador bloqueó el autoplay.");
+        });
+
+        video.removeEventListener("loadedmetadata", restaurarTiempo);
       });
     }
 
-    window.addEventListener("load", iniciarPentaTV);
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) iniciarPentaTV();
-    });
+    revisarVersion();
 
-    document.addEventListener("touchstart", iniciarPentaTV, { once: true });
-    document.addEventListener("click", iniciarPentaTV, { once: true });
+    // Revisar cada 30 segundos
+    setInterval(revisarVersion, 30000);
+
   </script>
 
 </body>
