@@ -20,9 +20,11 @@
       overflow: hidden;
     }
 
-    video {
-      width: 100vw;
-      height: 100vh;
+    #pentaTV {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
       background: #000;
     }
@@ -37,10 +39,32 @@
     muted
     loop
     playsinline
+    webkit-playsinline
     preload="auto"
   >
     <source src="video.mp4" type="video/mp4">
   </video>
+
+  <script>
+    const video = document.getElementById("pentaTV");
+
+    video.muted = true;
+    video.defaultMuted = true;
+
+    function iniciarPentaTV() {
+      video.play().catch(() => {
+        console.log("Safari bloqueó temporalmente el autoplay.");
+      });
+    }
+
+    window.addEventListener("load", iniciarPentaTV);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) iniciarPentaTV();
+    });
+
+    document.addEventListener("touchstart", iniciarPentaTV, { once: true });
+    document.addEventListener("click", iniciarPentaTV, { once: true });
+  </script>
 
 </body>
 </html>
