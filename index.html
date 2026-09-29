@@ -18,8 +18,10 @@
       height: 100%;
       background: #000;
       overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
     }
 
+    /* VIDEO */
     #pentaTV {
       position: fixed;
       inset: 0;
@@ -28,11 +30,50 @@
       object-fit: contain;
       background: #000;
     }
+
+    /* PANTALLA DE INICIO */
+    #inicio {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      cursor: pointer;
+    }
+
+    #inicio h1 {
+      color: #ffffff;
+      font-size: clamp(32px, 5vw, 72px);
+      letter-spacing: 6px;
+      margin-bottom: 20px;
+    }
+
+    #inicio p {
+      color: #aaaaaa;
+      font-size: clamp(14px, 1.5vw, 20px);
+      letter-spacing: 2px;
+    }
+
+    #inicio .boton {
+      margin-top: 40px;
+      padding: 16px 34px;
+      border: 1px solid #ffffff;
+      border-radius: 50px;
+      color: #ffffff;
+      font-size: 14px;
+      letter-spacing: 2px;
+    }
   </style>
 </head>
 
 <body>
 
+  <!-- VIDEO PENTA TV -->
   <video
     id="pentaTV"
     autoplay
@@ -43,62 +84,155 @@
     preload="auto">
   </video>
 
+
+  <!-- PANTALLA DE INICIO -->
+  <div id="inicio">
+    <h1>PENTA TV</h1>
+    <p>COMUNICACIÓN INTERNA</p>
+
+    <div class="boton">
+      INICIAR TRANSMISIÓN
+    </div>
+  </div>
+
+
   <script>
+
     const video = document.getElementById("pentaTV");
+    const inicio = document.getElementById("inicio");
 
     let versionActual = null;
 
     video.muted = true;
     video.defaultMuted = true;
 
+
+    /* ==============================
+       CARGAR VIDEO
+    ============================== */
+
+    function cargarVideo(version) {
+
+      const tiempoAnterior = video.currentTime || 0;
+
+      video.src =
+        "video.mp4?v=" + encodeURIComponent(version);
+
+      video.load();
+
+      video.addEventListener(
+        "loadedmetadata",
+        function restaurarTiempo() {
+
+          if (tiempoAnterior < video.duration) {
+            video.currentTime = tiempoAnterior;
+          }
+
+          video.play().catch(() => {});
+
+          video.removeEventListener(
+            "loadedmetadata",
+            restaurarTiempo
+          );
+        }
+      );
+    }
+
+
+    /* ==============================
+       REVISAR VERSION
+    ============================== */
+
     async function revisarVersion() {
+
       try {
+
         const respuesta = await fetch(
           "version.txt?t=" + Date.now(),
-          { cache: "no-store" }
+          {
+            cache: "no-store"
+          }
         );
 
-        const nuevaVersion = (await respuesta.text()).trim();
+        const nuevaVersion =
+          (await respuesta.text()).trim();
+
+
+        /* Primera carga */
 
         if (versionActual === null) {
+
           versionActual = nuevaVersion;
+
           cargarVideo(nuevaVersion);
+
           return;
         }
 
+
+        /* Nueva versión encontrada */
+
         if (nuevaVersion !== versionActual) {
+
           versionActual = nuevaVersion;
+
           cargarVideo(nuevaVersion);
+
         }
 
-      } catch (error) {
-        console.log("No se pudo comprobar la versión.");
+      }
+
+      catch (error) {
+
+        console.log(
+          "No se pudo comprobar la versión."
+        );
+
       }
     }
 
-    function cargarVideo(version) {
-      const tiempoAnterior = video.currentTime || 0;
 
-      video.src = "video.mp4?v=" + encodeURIComponent(version);
-      video.load();
+    /* ==============================
+       INICIAR PENTA TV
+    ============================== */
 
-      video.addEventListener("loadedmetadata", function restaurarTiempo() {
-        if (tiempoAnterior < video.duration) {
-          video.currentTime = tiempoAnterior;
-        }
+    inicio.addEventListener("click", async () => {
 
-        video.play().catch(() => {
-          console.log("El navegador bloqueó el autoplay.");
-        });
+      try {
 
-        video.removeEventListener("loadedmetadata", restaurarTiempo);
-      });
-    }
+        await document.documentElement.requestFullscreen();
+
+      }
+
+      catch (error) {
+
+        console.log(
+          "Fullscreen no disponible."
+        );
+
+      }
+
+      inicio.style.display = "none";
+
+      video.muted = true;
+
+      video.play().catch(() => {});
+
+    });
+
+
+    /* ==============================
+       ARRANQUE
+    ============================== */
 
     revisarVersion();
 
-    // Revisar cada 30 segundos
-    setInterval(revisarVersion, 30000);
+    /* Revisar actualizaciones cada 30 segundos */
+
+    setInterval(
+      revisarVersion,
+      30000
+    );
 
   </script>
 
